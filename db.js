@@ -3,7 +3,12 @@ require('dotenv').config();
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      // Fail fast if servers cannot be selected
+      serverSelectionTimeoutMS: 10000,
+    });
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`📊 Database Name: ${conn.connection.name}`);
@@ -22,10 +27,11 @@ const connectDB = async () => {
       process.exit(0);
     });
 
+    return true;
   } catch (err) {
-    console.error('❌ MongoDB connection error:', err.message);
+    console.error('❌ MongoDB connection error:', err.message || err);
     console.log('⚠️ Server will continue without database connection. Some features may not work.');
-    // Don't exit the process, let the server continue
+    return false;
   }
 };
 

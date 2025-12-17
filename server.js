@@ -12,8 +12,7 @@ const AdminUser = require('./models/AdminUser');
 
 const app = express();
 
-// Connect to MongoDB
-connectDB();
+// Start server and connect to MongoDB
 
 // Initialize default admin user on startup
 const initializeDefaultAdmin = async () => {
@@ -173,14 +172,29 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-app.listen(PORT, async () => {
-  console.log(`🚀 TBuy Shop API Server (${NODE_ENV}) started on port ${PORT}`);
-  console.log(`🌐 http://localhost:${PORT}`);
-  console.log(`📁 Uploads served from: http://localhost:${PORT}/${uploadPath}`);
-  console.log(`📊 MongoDB: Connected to ${process.env.MONGODB_URI}`);
-  
-  // Initialize default admin user after a short delay to ensure DB connection
-  setTimeout(() => {
-    initializeDefaultAdmin();
-  }, 1000);
-});
+const startServer = async () => {
+  const dbConnected = await connectDB();
+
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 TBuy Shop API Server (${NODE_ENV}) started on port ${PORT}`);
+    console.log(`🌐 http://localhost:${PORT}`);
+    console.log(`📁 Uploads served from: http://localhost:${PORT}/${uploadPath}`);
+    console.log(`📊 MongoDB: ${process.env.MONGODB_URI || 'not provided'}`);
+  });
+
+  if (dbConnected) {
+    // Ensure we only initialize admin after mongoose connection is open
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState === 1) {
+      initializeDefaultAdmin();
+    } else {
+      mongoose.connection.once('open', initializeDefaultAdmin);
+    }
+  } else {
+    console.warn('⚠️ Skipping admin initialization: no DB connection.');
+  }
+
+  return server;
+};
+
+startServer();
