@@ -103,6 +103,17 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Debug middleware for user deletion issues
+app.use('/api/admin', (req, res, next) => {
+  console.log('🔍 ADMIN API REQUEST DEBUG:');
+  console.log('  - Method:', req.method);
+  console.log('  - URL:', req.originalUrl);
+  console.log('  - Params:', req.params);
+  console.log('  - Query:', req.query);
+  console.log('  - Body:', req.body);
+  next();
+});
 app.use(`/${uploadPath}`, express.static(path.join(__dirname, uploadPath)));
 
 // File upload endpoint

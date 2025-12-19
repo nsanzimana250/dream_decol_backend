@@ -107,7 +107,19 @@ router.post('/auth/register', [protect, superAdmin], [
 // @access  Private (Admin only)
 router.get('/users', [protect, admin], async (req, res) => {
   try {
+    console.log('🔍 GET ALL USERS REQUEST DEBUG:');
     const users = await AdminUser.find().select('-password');
+    console.log('📊 Users found:', users.length);
+    console.log('📋 User data structure:');
+    users.forEach((user, index) => {
+      console.log(`  User ${index + 1}:`, {
+        id: user._id,
+        idType: typeof user._id,
+        username: user.username,
+        hasId: !!user._id
+      });
+    });
+    
     res.json({
       success: true,
       count: users.length,
@@ -188,19 +200,38 @@ router.put('/users/:id', [protect, admin], [
 // @access  Private (Admin only)
 router.delete('/users/:id', [protect, admin], async (req, res) => {
   try {
+    console.log('🔍 DELETE USER REQUEST DEBUG:');
+    console.log('  - Request URL:', req.originalUrl);
+    console.log('  - User ID from params:', req.params.id);
+    console.log('  - User ID type:', typeof req.params.id);
+    console.log('  - Is user ID valid MongoDB ObjectId?', req.params.id && req.params.id.match(/^[0-9a-fA-F]{24}$/));
+    
+    // Validate user ID
+    if (!req.params.id || req.params.id === 'undefined') {
+      console.error('❌ Invalid user ID received:', req.params.id);
+      return res.status(400).json({ 
+        error: 'Invalid user ID', 
+        receivedId: req.params.id,
+        debug: 'User ID is missing or undefined' 
+      });
+    }
+
     const user = await AdminUser.findById(req.params.id);
     if (!user) {
+      console.log('❌ User not found for ID:', req.params.id);
       return res.status(404).json({ error: 'User not found' });
     }
 
+    console.log('✅ Found user to delete:', { id: user._id, username: user.username });
     await user.remove();
+    console.log('✅ User deleted successfully');
 
     res.json({
       success: true,
       message: 'User deleted successfully'
     });
   } catch (error) {
-    console.error('Delete user error:', error);
+    console.error('❌ Delete user error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
