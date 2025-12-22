@@ -401,6 +401,19 @@ mongoimport --uri "mongodb+srv://username:password@cluster.mongodb.net/dream_dec
 
 ---
 
+## 📚 Complete API Documentation
+
+For detailed endpoint documentation, examples, and testing guides, see: **[API_ENDPOINTS.md](./API_ENDPOINTS.md)**
+
+This comprehensive guide includes:
+- All CRUD operations for admin users
+- Public endpoints for customers
+- Authentication examples
+- Request/response formats
+- Live API testing examples
+
+---
+
 ## 📁 Project Structure
 
 ```
