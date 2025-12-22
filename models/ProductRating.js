@@ -43,15 +43,20 @@ productRatingSchema.index({ createdAt: -1 });
 
 // Static method to calculate average rating for a product
 productRatingSchema.statics.getAverageRating = function(productId) {
-  // Validate productId is a valid ObjectId
-  if (!mongoose.Types.ObjectId.isValid(productId)) {
-    console.warn('Invalid productId provided to getAverageRating:', productId);
-    return [];
-  }
-  
   try {
+    // Handle string or ObjectId input safely
+    let objectId;
+    if (productId instanceof mongoose.Types.ObjectId) {
+      objectId = productId;
+    } else if (typeof productId === 'string' && mongoose.Types.ObjectId.isValid(productId)) {
+      objectId = new mongoose.Types.ObjectId(productId);
+    } else {
+      console.warn('Invalid productId provided to getAverageRating:', productId);
+      return Promise.resolve([]);
+    }
+    
     return this.aggregate([
-      { $match: { productId: new mongoose.Types.ObjectId(productId) } },
+      { $match: { productId: objectId } },
       {
         $group: {
           _id: '$productId',
@@ -62,21 +67,26 @@ productRatingSchema.statics.getAverageRating = function(productId) {
     ]);
   } catch (error) {
     console.error('Error in getAverageRating:', error);
-    return [];
+    return Promise.resolve([]);
   }
 };
 
 // Static method to get rating distribution for a product
 productRatingSchema.statics.getRatingDistribution = function(productId) {
-  // Validate productId is a valid ObjectId
-  if (!mongoose.Types.ObjectId.isValid(productId)) {
-    console.warn('Invalid productId provided to getRatingDistribution:', productId);
-    return [];
-  }
-  
   try {
+    // Handle string or ObjectId input safely
+    let objectId;
+    if (productId instanceof mongoose.Types.ObjectId) {
+      objectId = productId;
+    } else if (typeof productId === 'string' && mongoose.Types.ObjectId.isValid(productId)) {
+      objectId = new mongoose.Types.ObjectId(productId);
+    } else {
+      console.warn('Invalid productId provided to getRatingDistribution:', productId);
+      return Promise.resolve([]);
+    }
+    
     return this.aggregate([
-      { $match: { productId: new mongoose.Types.ObjectId(productId) } },
+      { $match: { productId: objectId } },
       {
         $group: {
           _id: '$rating',
@@ -87,7 +97,7 @@ productRatingSchema.statics.getRatingDistribution = function(productId) {
     ]);
   } catch (error) {
     console.error('Error in getRatingDistribution:', error);
-    return [];
+    return Promise.resolve([]);
   }
 };
 
