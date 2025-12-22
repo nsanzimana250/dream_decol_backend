@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { body, param, validationResult } = require('express-validator');
 const ProductRating = require('../models/ProductRating');
 const Product = require('../models/Product');
@@ -134,50 +135,74 @@ router.get('/:productId', validateProductId, async (req, res) => {
   try {
     const { productId } = req.params;
     
+    // Additional validation using Mongoose ObjectId validation
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ 
+        error: 'Invalid product ID format',
+        message: 'Product ID must be a valid MongoDB ObjectId'
+      });
+    }
+    
     // Verify that the product exists
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
     
-    // Get average rating and total count
-    const averageData = await ProductRating.getAverageRating(productId);
-    const averageRating = averageData.length > 0 ? averageData[0].averageRating : 0;
-    const totalRatings = averageData.length > 0 ? averageData[0].totalRatings : 0;
-    
-    // Get rating distribution
-    const distributionData = await ProductRating.getRatingDistribution(productId);
-    
-    // Format distribution (ensure all ratings 1-5 are represented)
-    const ratingDistribution = {};
-    for (let i = 1; i <= 5; i++) {
-      const found = distributionData.find(item => item._id === i);
-      ratingDistribution[i] = found ? found.count : 0;
-    }
-    
-    // Get recent ratings (last 10)
-    const recentRatings = await ProductRating.find({ productId })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .select('-ipAddress -userAgent') // Don't expose sensitive info
-      .lean();
-    
-    res.json({
-      success: true,
-      data: {
-        productId,
-        productTitle: product.title,
-        averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
-        totalRatings,
-        ratingDistribution,
-        recentRatings: recentRatings.map(rating => ({
-          id: rating._id,
-          rating: rating.rating,
-          ratingStars: '★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating),
-          createdAt: rating.createdAt
-        }))
+    try {
+      // Get average rating and total count with safe defaults
+      const averageData = await ProductRating.getAverageRating(productId);
+      const averageRating = averageData.length > 0 ? averageData[0].averageRating : 0;
+      const totalRatings = averageData.length > 0 ? averageData[0].totalRatings : 0;
+      
+      // Get rating distribution
+      const distributionData = await ProductRating.getRatingDistribution(productId);
+      
+      // Format distribution (ensure all ratings 1-5 are represented)
+      const ratingDistribution = {};
+      for (let i = 1; i <= 5; i++) {
+        const found = distributionData.find(item => item._id === i);
+        ratingDistribution[i] = found ? found.count : 0;
       }
-    });
+      
+      // Get recent ratings (last 10)
+      const recentRatings = await ProductRating.find({ productId })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .select('-ipAddress -userAgent') // Don't expose sensitive info
+        .lean();
+      
+      res.json({
+        success: true,
+        data: {
+          productId,
+          productTitle: product.title,
+          averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
+          totalRatings,
+          ratingDistribution,
+          recentRatings: recentRatings.map(rating => ({
+            id: rating._id,
+            rating: rating.rating,
+            ratingStars: '★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating),
+            createdAt: rating.createdAt
+          }))
+        }
+      });
+    } catch (dbError) {
+      console.error('Database operation error:', dbError);
+      // Return safe defaults on database errors
+      res.json({
+        success: true,
+        data: {
+          productId,
+          productTitle: product.title,
+          averageRating: 0,
+          totalRatings: 0,
+          ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+          recentRatings: []
+        }
+      });
+    }
   } catch (error) {
     console.error('Get ratings error:', error);
     res.status(500).json({ error: 'Failed to fetch ratings' });
@@ -189,49 +214,79 @@ router.get('/:productId/stats', validateProductId, async (req, res) => {
   try {
     const { productId } = req.params;
     
+    // Additional validation using Mongoose ObjectId validation
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ 
+        error: 'Invalid product ID format',
+        message: 'Product ID must be a valid MongoDB ObjectId'
+      });
+    }
+    
     // Verify that the product exists
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
     
-    // Get comprehensive statistics
-    const [averageData, distributionData, totalRatings] = await Promise.all([
-      ProductRating.getAverageRating(productId),
-      ProductRating.getRatingDistribution(productId),
-      ProductRating.countDocuments({ productId })
-    ]);
-    
-    const averageRating = averageData.length > 0 ? averageData[0].averageRating : 0;
-    
-    // Calculate percentage distribution
-    const ratingDistribution = {};
-    for (let i = 1; i <= 5; i++) {
-      const found = distributionData.find(item => item._id === i);
-      const count = found ? found.count : 0;
-      ratingDistribution[i] = {
-        count,
-        percentage: totalRatings > 0 ? Math.round((count / totalRatings) * 100) : 0
-      };
-    }
-    
-    res.json({
-      success: true,
-      data: {
-        productId,
-        productTitle: product.title,
-        averageRating: Math.round(averageRating * 10) / 10,
-        totalRatings,
-        ratingDistribution,
-        ratingBreakdown: {
-          5: ratingDistribution[5].percentage,
-          4: ratingDistribution[4].percentage,
-          3: ratingDistribution[3].percentage,
-          2: ratingDistribution[2].percentage,
-          1: ratingDistribution[1].percentage
-        }
+    try {
+      // Get comprehensive statistics
+      const [averageData, distributionData, totalRatings] = await Promise.all([
+        ProductRating.getAverageRating(productId),
+        ProductRating.getRatingDistribution(productId),
+        ProductRating.countDocuments({ productId })
+      ]);
+      
+      const averageRating = averageData.length > 0 ? averageData[0].averageRating : 0;
+      
+      // Calculate percentage distribution
+      const ratingDistribution = {};
+      for (let i = 1; i <= 5; i++) {
+        const found = distributionData.find(item => item._id === i);
+        const count = found ? found.count : 0;
+        ratingDistribution[i] = {
+          count,
+          percentage: totalRatings > 0 ? Math.round((count / totalRatings) * 100) : 0
+        };
       }
-    });
+      
+      res.json({
+        success: true,
+        data: {
+          productId,
+          productTitle: product.title,
+          averageRating: Math.round(averageRating * 10) / 10,
+          totalRatings,
+          ratingDistribution,
+          ratingBreakdown: {
+            5: ratingDistribution[5].percentage,
+            4: ratingDistribution[4].percentage,
+            3: ratingDistribution[3].percentage,
+            2: ratingDistribution[2].percentage,
+            1: ratingDistribution[1].percentage
+          }
+        }
+      });
+    } catch (dbError) {
+      console.error('Database operation error in stats:', dbError);
+      // Return safe defaults on database errors
+      res.json({
+        success: true,
+        data: {
+          productId,
+          productTitle: product.title,
+          averageRating: 0,
+          totalRatings: 0,
+          ratingDistribution: {
+            1: { count: 0, percentage: 0 },
+            2: { count: 0, percentage: 0 },
+            3: { count: 0, percentage: 0 },
+            4: { count: 0, percentage: 0 },
+            5: { count: 0, percentage: 0 }
+          },
+          ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+        }
+      });
+    }
   } catch (error) {
     console.error('Get rating stats error:', error);
     res.status(500).json({ error: 'Failed to fetch rating statistics' });

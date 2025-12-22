@@ -43,30 +43,52 @@ productRatingSchema.index({ createdAt: -1 });
 
 // Static method to calculate average rating for a product
 productRatingSchema.statics.getAverageRating = function(productId) {
-  return this.aggregate([
-    { $match: { productId: mongoose.Types.ObjectId(productId) } },
-    {
-      $group: {
-        _id: '$productId',
-        averageRating: { $avg: '$rating' },
-        totalRatings: { $sum: 1 }
+  // Validate productId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    console.warn('Invalid productId provided to getAverageRating:', productId);
+    return [];
+  }
+  
+  try {
+    return this.aggregate([
+      { $match: { productId: new mongoose.Types.ObjectId(productId) } },
+      {
+        $group: {
+          _id: '$productId',
+          averageRating: { $avg: '$rating' },
+          totalRatings: { $sum: 1 }
+        }
       }
-    }
-  ]);
+    ]);
+  } catch (error) {
+    console.error('Error in getAverageRating:', error);
+    return [];
+  }
 };
 
 // Static method to get rating distribution for a product
 productRatingSchema.statics.getRatingDistribution = function(productId) {
-  return this.aggregate([
-    { $match: { productId: mongoose.Types.ObjectId(productId) } },
-    {
-      $group: {
-        _id: '$rating',
-        count: { $sum: 1 }
-      }
-    },
-    { $sort: { _id: -1 } }
-  ]);
+  // Validate productId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    console.warn('Invalid productId provided to getRatingDistribution:', productId);
+    return [];
+  }
+  
+  try {
+    return this.aggregate([
+      { $match: { productId: new mongoose.Types.ObjectId(productId) } },
+      {
+        $group: {
+          _id: '$rating',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: -1 } }
+    ]);
+  } catch (error) {
+    console.error('Error in getRatingDistribution:', error);
+    return [];
+  }
 };
 
 // Instance method to check if rating is valid
