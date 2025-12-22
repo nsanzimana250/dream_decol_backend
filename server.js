@@ -7,33 +7,10 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
-// Import AdminUser model for initialization
-const AdminUser = require('./models/AdminUser');
+// Import Configuration model for system settings
+const Configuration = require('./models/Configuration');
 
 const app = express();
-
-// Start server and connect to MongoDB
-
-// Initialize default admin user on startup
-const initializeDefaultAdmin = async () => {
-  try {
-    const adminExists = await AdminUser.findOne({ username: 'admin' });
-    if (!adminExists) {
-      const admin = new AdminUser({
-        username: 'admin',
-        password: 'admin123', // Will be hashed by pre-save hook
-        role: 'superadmin',
-        isActive: true
-      });
-      await admin.save();
-      console.log('✅ Default admin user created (username: admin, password: admin123)');
-    } else {
-      console.log('✅ Admin user already exists');
-    }
-  } catch (error) {
-    console.error('Error initializing admin user:', error.message);
-  }
-};
 
 // Configure multer for file uploads
 const uploadPath = process.env.UPLOAD_PATH || 'uploads';
@@ -138,8 +115,8 @@ const contactMessageRoutes = require('./routes/contactMessageRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const productRoutes = require('./routes/productRoutes');
 const ratingRoutes = require('./routes/ratingRoutes');
+const configRoutes = require('./routes/configRoutes');
 const { publicRouter: activityPublicRoutes, adminRouter: activityAdminRoutes } = require('./routes/activityRoutes');
-
 
 // Mount API routes
 app.use('/api/admin', adminUserRoutes);
@@ -147,6 +124,7 @@ app.use('/api/contact', contactMessageRoutes);
 app.use('/api/booking', bookingRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/ratings', ratingRoutes);
+app.use('/api/config', configRoutes);
 app.use('/api/activities', activityPublicRoutes);
 app.use('/api/admin/activities', activityAdminRoutes);
 
@@ -161,7 +139,9 @@ app.get('/api', (req, res) => {
       products: '/api/products',
       booking: '/api/booking',
       contact: '/api/contact',
-      ratings: '/api/ratings'
+      ratings: '/api/ratings',
+      config: '/api/config',
+      activities: '/api/activities'
     }
   });
 });
@@ -197,15 +177,9 @@ const startServer = async () => {
   });
 
   if (dbConnected) {
-    // Ensure we only initialize admin after mongoose connection is open
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState === 1) {
-      initializeDefaultAdmin();
-    } else {
-      mongoose.connection.once('open', initializeDefaultAdmin);
-    }
+    console.log('✅ Server started successfully with database connection');
   } else {
-    console.warn('⚠️ Skipping admin initialization: no DB connection.');
+    console.warn('⚠️ Server started without database connection. Some features may not work.');
   }
 
   return server;

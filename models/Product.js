@@ -23,8 +23,7 @@ const productSchema = new mongoose.Schema({
   currency: {
     type: String,
     required: true,
-    default: 'RWF',
-    enum: ['USD', 'EUR', 'RWF']
+    default: 'RWF'
   },
   shortDescription: {
     type: String,
@@ -98,8 +97,7 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Category is required'],
     trim: true,
-    lowercase: true,
-    enum: ['living-room', 'bedroom', 'dining', 'office', 'outdoor', 'storage', 'lighting', 'decor']
+    lowercase: true
   },
   featured: {
     type: Boolean,
@@ -192,7 +190,7 @@ productSchema.set('toObject', { virtuals: true });
 
 // Static method to find by category
 productSchema.statics.findByCategory = function(category) {
-  return this.find({ category: category, status: 'active' });
+  return this.find({ category: category.toLowerCase(), status: 'active' });
 };
 
 // Static method to find featured products
@@ -201,7 +199,7 @@ productSchema.statics.findFeatured = function() {
 };
 
 // Static method to search products
-productSchema.statics.searchProducts = function(query, options = {}) {
+productSchema.statics.searchProducts = async function(query, options = {}) {
   const { category, minPrice, maxPrice, featured, limit = 20, page = 1 } = options;
   
   let searchQuery = { status: 'active' };
@@ -211,7 +209,8 @@ productSchema.statics.searchProducts = function(query, options = {}) {
   }
   
   if (category && category !== 'all') {
-    searchQuery.category = category;
+    // Normalize category to lowercase
+    searchQuery.category = category.toLowerCase();
   }
   
   if (featured !== undefined) {
@@ -230,6 +229,27 @@ productSchema.statics.searchProducts = function(query, options = {}) {
     .sort({ score: { $meta: 'textScore' } })
     .skip(skip)
     .limit(limit);
+};
+
+// Static method to get available categories
+productSchema.statics.getAvailableCategories = async function() {
+  const Configuration = require('./Configuration');
+  const config = await Configuration.getConfig('product.categories', []);
+  return config;
+};
+
+// Static method to get available currencies
+productSchema.statics.getAvailableCurrencies = async function() {
+  const Configuration = require('./Configuration');
+  const config = await Configuration.getConfig('product.currencies', ['USD', 'EUR', 'RWF']);
+  return config;
+};
+
+// Static method to get default currency
+productSchema.statics.getDefaultCurrency = async function() {
+  const Configuration = require('./Configuration');
+  const config = await Configuration.getConfig('product.defaultCurrency', 'RWF');
+  return config;
 };
 
 module.exports = mongoose.model('Product', productSchema);

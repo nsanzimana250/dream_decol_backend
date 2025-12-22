@@ -40,13 +40,11 @@ const bookingSchema = new mongoose.Schema({
   },
   time: {
     type: String,
-    required: true,
-    enum: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
+    required: true
   },
   serviceType: {
     type: String,
-    required: true,
-    enum: ['consultation', 'showroom-visit', 'home-measurement', 'delivery']
+    required: true
   },
   notes: {
     type: String,
@@ -55,7 +53,6 @@ const bookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'completed', 'cancelled'],
     default: 'pending'
   },
   createdAt: {
@@ -100,5 +97,59 @@ bookingSchema.virtual('formattedTime').get(function() {
 // Ensure virtual fields are serialized
 bookingSchema.set('toJSON', { virtuals: true });
 bookingSchema.set('toObject', { virtuals: true });
+
+// Static method to get available time slots
+bookingSchema.statics.getAvailableTimeSlots = async function() {
+  const Configuration = require('./Configuration');
+  const config = await Configuration.getConfig('booking.timeSlots', ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']);
+  return config;
+};
+
+// Static method to get available service types
+bookingSchema.statics.getAvailableServiceTypes = async function() {
+  const Configuration = require('./Configuration');
+  const config = await Configuration.getConfig('booking.serviceTypes', ['consultation', 'showroom-visit', 'home-measurement', 'delivery']);
+  return config;
+};
+
+// Static method to get available statuses
+bookingSchema.statics.getAvailableStatuses = async function() {
+  const Configuration = require('./Configuration');
+  const config = await Configuration.getConfig('booking.statuses', ['pending', 'confirmed', 'completed', 'cancelled']);
+  return config;
+};
+
+// Pre-save middleware to validate time slot
+bookingSchema.pre('save', async function(next) {
+  if (this.isModified('time')) {
+    const validTimeSlots = await this.constructor.getAvailableTimeSlots();
+    if (!validTimeSlots.includes(this.time)) {
+      return next(new Error(`Invalid time slot: ${this.time}. Valid time slots are: ${validTimeSlots.join(', ')}`));
+    }
+  }
+  next();
+});
+
+// Pre-save middleware to validate service type
+bookingSchema.pre('save', async function(next) {
+  if (this.isModified('serviceType')) {
+    const validServiceTypes = await this.constructor.getAvailableServiceTypes();
+    if (!validServiceTypes.includes(this.serviceType)) {
+      return next(new Error(`Invalid service type: ${this.serviceType}. Valid service types are: ${validServiceTypes.join(', ')}`));
+    }
+  }
+  next();
+});
+
+// Pre-save middleware to validate status
+bookingSchema.pre('save', async function(next) {
+  if (this.isModified('status')) {
+    const validStatuses = await this.constructor.getAvailableStatuses();
+    if (!validStatuses.includes(this.status)) {
+      return next(new Error(`Invalid status: ${this.status}. Valid statuses are: ${validStatuses.join(', ')}`));
+    }
+  }
+  next();
+});
 
 module.exports = mongoose.model('Booking', bookingSchema);

@@ -102,7 +102,8 @@ router.get('/availability', async (req, res) => {
 
     const bookedTimes = bookings.map(booking => booking.time);
     
-    const allTimeSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+    // Get time slots from configuration
+    const allTimeSlots = await Booking.getAvailableTimeSlots();
     
     const availableSlots = allTimeSlots.filter(time => !bookedTimes.includes(time));
 

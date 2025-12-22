@@ -18,7 +18,6 @@ const AdminUserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['superadmin', 'admin', 'moderator'],
     default: 'admin'
   },
   isActive: {
@@ -48,6 +47,14 @@ AdminUserSchema.pre('save', async function(next) {
   }
 });
 
+// Set default role before saving if not provided
+AdminUserSchema.pre('save', async function(next) {
+  if (!this.role) {
+    this.role = await this.constructor.getDefaultRole();
+  }
+  next();
+});
+
 // Update updatedAt field before saving
 AdminUserSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
@@ -68,5 +75,30 @@ AdminUserSchema.methods.generateAuthToken = function() {
     { expiresIn: process.env.JWT_EXPIRE || '1d' }
   );
 };
+
+// Static method to get available roles
+AdminUserSchema.statics.getAvailableRoles = async function() {
+  const Configuration = require('./Configuration');
+  const config = await Configuration.getConfig('user.adminRoles', ['superadmin', 'admin', 'moderator']);
+  return config;
+};
+
+// Static method to get default role
+AdminUserSchema.statics.getDefaultRole = async function() {
+  const Configuration = require('./Configuration');
+  const config = await Configuration.getConfig('user.defaultAdminRole', 'admin');
+  return config;
+};
+
+// Pre-save middleware to validate role
+AdminUserSchema.pre('save', async function(next) {
+  if (this.isModified('role')) {
+    const validRoles = await this.constructor.getAvailableRoles();
+    if (!validRoles.includes(this.role)) {
+      return next(new Error(`Invalid role: ${this.role}. Valid roles are: ${validRoles.join(', ')}`));
+    }
+  }
+  next();
+});
 
 module.exports = mongoose.model('AdminUser', AdminUserSchema);

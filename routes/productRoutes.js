@@ -6,8 +6,11 @@ const { protect: auth } = require('../middleware/auth');
 // Get all products (Public)
 router.get('/', async (req, res) => {
   try {
+    const Configuration = require('../models/Configuration');
+    const defaultLimit = await Configuration.getConfig('system.pagination.defaultLimit', 12);
+    
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
+    const limit = parseInt(req.query.limit) || defaultLimit;
     const search = req.query.q || '';
     const category = req.query.category;
     const sort = req.query.sort || 'newest';
@@ -23,9 +26,12 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    // Add category filter
+    // Add category filter with validation
     if (category && category !== 'all') {
-      query.category = category;
+      const availableCategories = await Product.getAvailableCategories();
+      if (availableCategories.includes(category.toLowerCase())) {
+        query.category = category.toLowerCase();
+      }
     }
 
     // Build sort object
@@ -81,17 +87,22 @@ router.get('/featured', async (req, res) => {
 // Get categories (Public)
 router.get('/categories', async (req, res) => {
   try {
+    const availableCategories = await Product.getAvailableCategories();
+    
+    // Get category counts from database
     const categories = await Product.aggregate([
       { $match: { status: 'active' } },
       { $group: { _id: '$category', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
 
-    const formattedCategories = categories.map(cat => ({
-      id: cat._id,
-      name: cat._id.charAt(0).toUpperCase() + cat._id.slice(1).replace('-', ' '),
-      count: cat.count
-    }));
+    const formattedCategories = categories
+      .filter(cat => availableCategories.includes(cat._id)) // Only include available categories
+      .map(cat => ({
+        id: cat._id,
+        name: cat._id.charAt(0).toUpperCase() + cat._id.slice(1).replace('-', ' '),
+        count: cat.count
+      }));
 
     res.json({ success: true, categories: formattedCategories });
   } catch (error) {
