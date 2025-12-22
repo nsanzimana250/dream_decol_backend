@@ -34,60 +34,10 @@ const validateProductId = [
   handleValidationErrors
 ];
 
-// Middleware to capture IP address and user agent
-const captureRequestInfo = (req, res, next) => {
-  // Get real IP address (considering proxies)
-  req.clientIP = req.ip || 
-                 req.connection.remoteAddress || 
-                 req.socket.remoteAddress ||
-                 (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-                 'unknown';
-  
-  // Clean up IP address (remove IPv6 prefix if present)
-  if (req.clientIP && req.clientIP.startsWith('::ffff:')) {
-    req.clientIP = req.clientIP.substring(7);
-  }
-  
-  req.userAgent = req.get('User-Agent') || '';
-  next();
-};
-
-// Middleware to check for duplicate rating
-const checkDuplicateRating = async (req, res, next) => {
-  try {
-    const { productId } = req.body;
-    const ipAddress = req.clientIP;
-    
-    const existingRating = await ProductRating.findOne({
-      productId: productId,
-      ipAddress: ipAddress
-    });
-    
-    if (existingRating) {
-      return res.status(409).json({
-        error: 'You have already rated this product from this device/IP address',
-        message: 'Each customer can only rate a product once per device',
-        existingRating: {
-          id: existingRating._id,
-          rating: existingRating.rating,
-          createdAt: existingRating.createdAt
-        }
-      });
-    }
-    
-    next();
-  } catch (error) {
-    console.error('Check duplicate rating error:', error);
-    res.status(500).json({ error: 'Failed to check duplicate rating' });
-  }
-};
-
 // POST /api/ratings - Submit a rating for a product
-router.post('/', captureRequestInfo, validateRating, checkDuplicateRating, async (req, res) => {
+router.post('/', validateRating, async (req, res) => {
   try {
     const { productId, rating } = req.body;
-    const ipAddress = req.clientIP;
-    const userAgent = req.userAgent;
     
     // Verify that the product exists
     const product = await Product.findById(productId);
@@ -95,12 +45,10 @@ router.post('/', captureRequestInfo, validateRating, checkDuplicateRating, async
       return res.status(404).json({ error: 'Product not found' });
     }
     
-    // Create the rating
+    // Create the rating without IP address or user agent
     const productRating = new ProductRating({
       productId,
-      rating,
-      ipAddress,
-      userAgent
+      rating
     });
     
     await productRating.save();
@@ -117,15 +65,6 @@ router.post('/', captureRequestInfo, validateRating, checkDuplicateRating, async
     });
   } catch (error) {
     console.error('Create rating error:', error);
-    
-    // Handle MongoDB duplicate key errors specifically
-    if (error.name === 'MongoServerError' && error.code === 11000) {
-      return res.status(409).json({
-        error: 'You have already rated this product from this device/IP address',
-        message: 'Each customer can only rate a product once per device'
-      });
-    }
-    
     res.status(500).json({ error: 'Failed to submit rating' });
   }
 });
@@ -165,7 +104,6 @@ router.get('/:productId', validateProductId, async (req, res) => {
         ProductRating.find({ productId: objectId })
           .sort({ createdAt: -1 })
           .limit(10)
-          .select('-ipAddress -userAgent') // Don't expose sensitive info
           .lean()
       ]);
       
@@ -235,6 +173,83 @@ router.get('/:productId', validateProductId, async (req, res) => {
         ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
         recentRatings: []
       }
+    });
+  }
+});
+
+// GET /api/ratings/:productId/summary - Get average rating and total count (simplified endpoint)
+router.get('/:productId/summary', validateProductId, async (req, res) => {
+  try {
+    const { productId } = req.params;
+    
+    // Validate and convert productId to MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ 
+        error: 'Invalid product ID format',
+        message: 'Product ID must be a valid MongoDB ObjectId'
+      });
+    }
+    
+    const objectId = new mongoose.Types.ObjectId(productId);
+    
+    // Verify that the product exists
+    const product = await Product.findById(objectId).lean();
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    try {
+      // Use aggregation to get both average rating and total count in one query
+      const result = await ProductRating.aggregate([
+        { $match: { productId: objectId } },
+        {
+          $group: {
+            _id: '$productId',
+            averageRating: { $avg: '$rating' },
+            totalRatings: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      // Extract values safely - return 0 for products with no ratings
+      const averageRating = result.length > 0 
+        ? Math.round((result[0].averageRating || 0) * 10) / 10 // Round to 1 decimal place
+        : 0;
+      const totalRatings = result.length > 0 ? result[0].totalRatings : 0;
+      
+      // Always return HTTP 200 with the exact format requested
+      res.status(200).json({
+        success: true,
+        averageRating,
+        totalRatings
+      });
+      
+    } catch (dbError) {
+      console.error('Database operation error:', dbError);
+      // Return safe defaults on database error - never crash
+      res.status(200).json({
+        success: true,
+        averageRating: 0,
+        totalRatings: 0
+      });
+    }
+    
+  } catch (error) {
+    console.error('Get rating summary error:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError' || error.name === 'CastError') {
+      return res.status(400).json({ 
+        error: 'Invalid product ID format',
+        message: 'Product ID must be a valid MongoDB ObjectId'
+      });
+    }
+    
+    // For any unexpected errors, return safe defaults - never crash
+    res.status(200).json({
+      success: true,
+      averageRating: 0,
+      totalRatings: 0
     });
   }
 });

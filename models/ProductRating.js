@@ -4,8 +4,7 @@ const productRatingSchema = new mongoose.Schema({
   productId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
-    required: [true, 'Product ID is required'],
-    index: true
+    required: [true, 'Product ID is required']
   },
   rating: {
     type: Number,
@@ -17,16 +16,6 @@ const productRatingSchema = new mongoose.Schema({
       message: 'Rating must be an integer'
     }
   },
-  ipAddress: {
-    type: String,
-    required: [true, 'IP address is required'],
-    trim: true,
-    index: true
-  },
-  userAgent: {
-    type: String,
-    trim: true
-  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -34,10 +23,8 @@ const productRatingSchema = new mongoose.Schema({
   }
 });
 
-// Compound index to prevent duplicate ratings from same IP for same product
-productRatingSchema.index({ productId: 1, ipAddress: 1 }, { unique: true });
-
 // Create indexes for better query performance
+productRatingSchema.index({ productId: 1 });
 productRatingSchema.index({ rating: 1 });
 productRatingSchema.index({ createdAt: -1 });
 
