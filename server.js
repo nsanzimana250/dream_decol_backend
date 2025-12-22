@@ -137,6 +137,7 @@ const adminUserRoutes = require('./routes/adminUserRoutes');
 const contactMessageRoutes = require('./routes/contactMessageRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const productRoutes = require('./routes/productRoutes');
+const ratingRoutes = require('./routes/ratingRoutes');
 const { publicRouter: activityPublicRoutes, adminRouter: activityAdminRoutes } = require('./routes/activityRoutes');
 
 
@@ -145,6 +146,7 @@ app.use('/api/admin', adminUserRoutes);
 app.use('/api/contact', contactMessageRoutes);
 app.use('/api/booking', bookingRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/ratings', ratingRoutes);
 app.use('/api/activities', activityPublicRoutes);
 app.use('/api/admin/activities', activityAdminRoutes);
 
@@ -158,7 +160,8 @@ app.get('/api', (req, res) => {
       admin: '/api/admin',
       products: '/api/products',
       booking: '/api/booking',
-      contact: '/api/contact'
+      contact: '/api/contact',
+      ratings: '/api/ratings'
     }
   });
 });

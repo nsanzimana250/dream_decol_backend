@@ -131,17 +131,7 @@ const productSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Care instructions cannot exceed 1000 characters']
   },
-  rating: {
-    type: Number,
-    min: [0, 'Rating cannot be negative'],
-    max: [5, 'Rating cannot exceed 5'],
-    default: 0
-  },
-  reviewCount: {
-    type: Number,
-    min: [0, 'Review count cannot be negative'],
-    default: 0
-  },
+
   seo: {
     metaTitle: {
       type: String,
