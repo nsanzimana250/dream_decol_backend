@@ -232,24 +232,18 @@ productSchema.statics.searchProducts = async function(query, options = {}) {
 };
 
 // Static method to get available categories
-productSchema.statics.getAvailableCategories = async function() {
-  const Configuration = require('./Configuration');
-  const config = await Configuration.getConfig('product.categories', []);
-  return config;
+productSchema.statics.getAvailableCategories = function() {
+  return ['living-room', 'bedroom', 'dining', 'office', 'outdoor', 'storage', 'lighting', 'decor'];
 };
 
 // Static method to get available currencies
-productSchema.statics.getAvailableCurrencies = async function() {
-  const Configuration = require('./Configuration');
-  const config = await Configuration.getConfig('product.currencies', ['USD', 'EUR', 'RWF']);
-  return config;
+productSchema.statics.getAvailableCurrencies = function() {
+  return ['USD', 'EUR', 'RWF'];
 };
 
 // Static method to get default currency
-productSchema.statics.getDefaultCurrency = async function() {
-  const Configuration = require('./Configuration');
-  const config = await Configuration.getConfig('product.defaultCurrency', 'RWF');
-  return config;
+productSchema.statics.getDefaultCurrency = function() {
+  return 'RWF';
 };
 
 module.exports = mongoose.model('Product', productSchema);

@@ -27,38 +27,6 @@ async function testAtlasConnection() {
       }
     }
     
-    // Test rating aggregation
-    console.log('\n🧪 Testing rating aggregation...');
-    const ProductRating = require('../models/ProductRating');
-    
-    // Test with a sample product ID (use one from your products)
-    const sampleProductId = '694961e7d6f9de65cd8ff525'; // Replace with actual product ID
-    
-    try {
-      const result = await ProductRating.aggregate([
-        { $match: { productId: new mongoose.Types.ObjectId(sampleProductId) } },
-        {
-          $group: {
-            _id: '$productId',
-            averageRating: { $avg: '$rating' },
-            totalRatings: { $sum: 1 }
-          }
-        }
-      ]);
-      
-      const averageRating = result.length > 0 
-        ? Math.round((result[0].averageRating || 0) * 10) / 10 
-        : 0;
-      const totalRatings = result.length > 0 ? result[0].totalRatings : 0;
-      
-      console.log(`✅ Rating test for product ${sampleProductId}:`);
-      console.log(`   - Average Rating: ${averageRating}`);
-      console.log(`   - Total Ratings: ${totalRatings}`);
-      
-    } catch (ratingError) {
-      console.log('⚠️ Rating test failed:', ratingError.message);
-    }
-    
     // Test products collection
     console.log('\n🛍️ Testing products collection...');
     const Product = require('../models/Product');

@@ -6,8 +6,7 @@ const { protect: auth } = require('../middleware/auth');
 // Get all products (Public)
 router.get('/', async (req, res) => {
   try {
-    const Configuration = require('../models/Configuration');
-    const defaultLimit = await Configuration.getConfig('system.pagination.defaultLimit', 12);
+    const defaultLimit = 12;
     
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || defaultLimit;

@@ -1,3 +1,4 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
@@ -5,18 +6,10 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
-// Atlas connection details
-const ATLAS_CONFIG = {
-  username: 'nsanzimanaesdras2_db_user',
-  password: 'VDjcotwlaT0l65Bc',
-  cluster: 'cluster0.1jag5yi.mongodb.net',
-  database: 'dream_decol',
-  ip: '129.222.149.116'
-};
+// Atlas connection details - using environment variable
+const ATLAS_URI = process.env.MONGODB_URI;
 
-const ATLAS_URI = `mongodb+srv://${ATLAS_CONFIG.username}:${ATLAS_CONFIG.password}@${ATLAS_CONFIG.cluster}/?appName=Cluster0`;
-
-const LOCAL_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dream_decol';
+const LOCAL_URI = 'mongodb://localhost:27017/dream_decol';
 
 class AtlasMigration {
   constructor() {

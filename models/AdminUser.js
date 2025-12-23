@@ -77,17 +77,13 @@ AdminUserSchema.methods.generateAuthToken = function() {
 };
 
 // Static method to get available roles
-AdminUserSchema.statics.getAvailableRoles = async function() {
-  const Configuration = require('./Configuration');
-  const config = await Configuration.getConfig('user.adminRoles', ['superadmin', 'admin', 'moderator']);
-  return config;
+AdminUserSchema.statics.getAvailableRoles = function() {
+  return ['superadmin', 'admin', 'moderator'];
 };
 
 // Static method to get default role
-AdminUserSchema.statics.getDefaultRole = async function() {
-  const Configuration = require('./Configuration');
-  const config = await Configuration.getConfig('user.defaultAdminRole', 'admin');
-  return config;
+AdminUserSchema.statics.getDefaultRole = function() {
+  return 'admin';
 };
 
 // Pre-save middleware to validate role

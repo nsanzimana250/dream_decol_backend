@@ -99,24 +99,18 @@ bookingSchema.set('toJSON', { virtuals: true });
 bookingSchema.set('toObject', { virtuals: true });
 
 // Static method to get available time slots
-bookingSchema.statics.getAvailableTimeSlots = async function() {
-  const Configuration = require('./Configuration');
-  const config = await Configuration.getConfig('booking.timeSlots', ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']);
-  return config;
+bookingSchema.statics.getAvailableTimeSlots = function() {
+  return ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
 };
 
 // Static method to get available service types
-bookingSchema.statics.getAvailableServiceTypes = async function() {
-  const Configuration = require('./Configuration');
-  const config = await Configuration.getConfig('booking.serviceTypes', ['consultation', 'showroom-visit', 'home-measurement', 'delivery']);
-  return config;
+bookingSchema.statics.getAvailableServiceTypes = function() {
+  return ['consultation', 'showroom-visit', 'home-measurement', 'delivery'];
 };
 
 // Static method to get available statuses
-bookingSchema.statics.getAvailableStatuses = async function() {
-  const Configuration = require('./Configuration');
-  const config = await Configuration.getConfig('booking.statuses', ['pending', 'confirmed', 'completed', 'cancelled']);
-  return config;
+bookingSchema.statics.getAvailableStatuses = function() {
+  return ['pending', 'confirmed', 'completed', 'cancelled'];
 };
 
 // Pre-save middleware to validate time slot

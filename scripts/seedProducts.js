@@ -2,35 +2,21 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Configuration = require('../models/Configuration');
 const { faker } = require('@faker-js/faker');
+require('dotenv').config();
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/dreamdecol')
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Connection error:', err));
 
-// Dynamic data that will be loaded from configuration
-let categories = [];
-let materialsList = [];
-
-// Load configuration data
-async function loadConfiguration() {
-  try {
-    categories = await Configuration.getConfig('product.categories', ['living-room', 'bedroom', 'dining', 'office', 'outdoor', 'storage', 'lighting', 'decor']);
-    materialsList = await Configuration.getConfig('product.materials', ['Wood', 'Metal', 'Glass', 'Fabric', 'Leather', 'Plastic', 'Ceramic', 'Bamboo']);
-    console.log('✅ Configuration loaded successfully');
-  } catch (error) {
-    console.error('⚠️ Error loading configuration, using defaults:', error.message);
-    // Fallback to defaults
-    categories = ['living-room', 'bedroom', 'dining', 'office', 'outdoor', 'storage', 'lighting', 'decor'];
-    materialsList = ['Wood', 'Metal', 'Glass', 'Fabric', 'Leather', 'Plastic', 'Ceramic', 'Bamboo'];
-  }
-}
+// Static data for seeding
+const categories = ['living-room', 'bedroom', 'dining', 'office', 'outdoor', 'storage', 'lighting', 'decor'];
+const materialsList = ['Wood', 'Metal', 'Glass', 'Fabric', 'Leather', 'Plastic', 'Ceramic', 'Bamboo'];
 
 // Generate 10 sample products
 let sampleProducts = [];
 
 async function generateSampleProducts() {
-  await loadConfiguration(); // Load configuration first
   
   sampleProducts = [];
   
@@ -85,7 +71,7 @@ async function seedProducts() {
     // Count products
     const count = await Product.countDocuments();
     console.log(`Total products in database: ${count}`);
-    console.log(`Used ${categories.length} categories and ${materialsList.length} materials from configuration`);
+    console.log(`Used ${categories.length} categories and ${materialsList.length} materials`);
     
     mongoose.connection.close();
   } catch (error) {

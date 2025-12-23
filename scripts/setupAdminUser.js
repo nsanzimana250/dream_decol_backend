@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const AdminUser = require('../models/AdminUser');
-const Configuration = require('../models/Configuration');
 const readline = require('readline');
 require('dotenv').config();
 

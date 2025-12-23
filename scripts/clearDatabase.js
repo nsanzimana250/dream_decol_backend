@@ -3,7 +3,6 @@ require('dotenv').config();
 
 // Import all models
 const Product = require('../models/Product');
-const ProductRating = require('../models/ProductRating');
 const Booking = require('../models/Booking');
 const ContactMessage = require('../models/ContactMessage');
 const Activity = require('../models/Activity');
@@ -11,7 +10,6 @@ const AdminUser = require('../models/AdminUser');
 
 const collectionsToClear = [
   { name: 'Product', model: Product },
-  { name: 'ProductRating', model: ProductRating },
   { name: 'Booking', model: Booking },
   { name: 'ContactMessage', model: ContactMessage },
   { name: 'Activity', model: Activity }
